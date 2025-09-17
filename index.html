@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>股票注碼實戰計算器</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{--c1:#003366;--c2:#f90;--c3:#28a745;--c4:#dc3545;--c5:#6c757d}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;background:#f2f5f7}
+header{background:var(--c1);color:#fff;padding:1rem;text-align:center}
+header h1{margin:0;font-size:1.5rem}
+.grd{display:grid;gap:1rem}
+.card{background:#fff;border-radius:8px;padding:1rem;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+label{font-weight:600;font-size:.9rem;color:var(--c1)}
+input,select{width:100%;padding:.6rem .7rem;border:1px solid #ccc;border-radius:4px;margin-top:.3rem;font-size:1rem}
+input:focus,select:focus{outline:none;border-color:var(--c2);box-shadow:0 0 0 2px rgba(255,153,0,.25)}
+.btn{background:var(--c3);color:#fff;border:none;padding:.75rem 1.5rem;border-radius:4px;font-size:1rem;cursor:pointer}
+.btn:hover{background:#218838}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin-top:.5rem}
+th,td{padding:.5rem;text-align:center;border:1px solid #e0e0e0}
+th{background:#f8f9fa}
+tr:nth-child(even){background:#fafafa}
+.mt1{margin-top:1rem}
+.w100{grid-template-columns:1fr 1fr}
+@media(min-width:600px){.w100{grid-template-columns:repeat(4,1fr)}}
+.t-right{text-align:right}
+.mono{font-family:monospace}
+</style>
+</head>
+<body>
+<header>
+  <h1>股票注碼實戰計算器</h1>
+</header>
+
+<div class="grd card" style="margin:1rem">
+  <h3>① 交易參數</h3>
+  <div class="grd w100">
+    <div>
+      <label>本金 USD</label>
+      <input id="usd" type="number" value="35000" min="0" step="100">
+    </div>
+    <div>
+      <label>本金 HKD</label>
+      <input id="hkd" type="number" value="273000" min="0" step="100">
+    </div>
+    <div>
+      <label>止損 %</label>
+      <input id="sl" type="number" value="4.6" min="0.1" max="100" step="0.1">
+    </div>
+    <div>
+      <label>槓桿</label>
+      <select id="lev">
+        <option value="1">現貨 1×</option>
+        <option value="16" selected>牛熊證 16×</option>
+        <option value="20">20×</option>
+      </select>
+    </div>
+  </div>
+  <button class="btn mt1" onclick="calc()">開始計算</button>
+</div>
+
+<div class="grd card" style="margin:1rem">
+  <h3>② 各 R 級別下注金額</h3>
+  <table id="rtbl"></table>
+</div>
+
+<div class="grd card" style="margin:1rem">
+  <h3>③ 盈利目標（USD / HKD）</h3>
+  <table id="ptbl"></table>
+</div>
+
+<div class="grd card" style="margin:1rem">
+  <h3>④ 6 輸 4 勝長期期望值（10 次循環）</h3>
+  <table id="etbl"></table>
+</div>
+
+<script>
+const RSET=[{n:"市真好",r:1.5},{n:"市正常用",r:1},{n:"市正常用0.93R",r:.93},{n:"市偏重要位置",r:.75},{n:"市唔好",r:.5},{n:"市麻麻好",r:.25}];
+const TGT=[2,2.5,3,4,5];
+
+function $(x){return document.getElementById(x)}
+function fmt(v,c=""){return`<span class="mono ${c}">$${v.toFixed(2)}</span>`}
+
+function calc(){
+  const P usd=Number($("usd").value)||0;
+  const P hkd=Number($("hkd").value)||0;
+  const SL=Number($("sl").value)||0;
+  const LEV=Number($("lev").value)||1;
+  const rate=P hkd/P usd;
+
+  // ② 各 R 下注表
+  let rh="<thead><tr><th>市況</th><th>R 倍</th><th>1R 值</th><th>應買入(USD)</th><th>應買入(HKD)</th><th>半注 USD</th><th>半注 HKD</th></tr></thead><tbody>";
+  RSET.forEach(o=>{
+    const rVal=P usd*SL/100*o.r;                 // 1R 美元
+    const buy=rVal/(SL/100);                     // 投入本金
+    const hkd1=buy*rate;
+    rh+=`<tr><td>${o.n}</td><td>${o.r}</td><td>${fmt(rVal)}</td><td>${fmt(buy)}</td><td>${fmt(hkd1)}</td><td>${fmt(buy/2)}</td><td>${fmt(hkd1/2)}</td></tr>`;
+  });
+  rh+="</tbody>";
+  $("rtbl").innerHTML=rh;
+
+  // ③ 盈利目標表
+  let ph="<thead><tr><th>市況</th><th>1R 值(HKD)</th>";
+  TGT.forEach(t=>ph+=`<th>${t}R 賺</th>`);
+  ph+="</tr></thead><tbody>";
+  RSET.forEach(o=>{
+    const rVal=P usd*SL/100*o.r*rate;
+    ph+=`<tr><td>${o.n}</td><td>${fmt(rVal)}</td>`;
+    TGT.forEach(t=>ph+=`<td>${fmt(rVal*t)}</td>`);
+    ph+="</tr>";
+  });
+  ph+="</tbody>";
+  $("ptbl").innerHTML=ph;
+
+  // ④ 6 輸 4 勝期望
+  const normalR=P usd*SL/100;
+  let eh="<thead><tr><th>目標</th><th>4 勝賺</th><th>6 輸賠</th><th>10 次淨利</th><th>平均/次</th><th>100 次預期</th></tr></thead><tbody>";
+  TGT.forEach(t=>{
+    const win=normalR*t*4;
+    const lose=normalR*6;
+    const net=win-lose;
+    const per=net/10;
+    const hun=per*100;
+    eh+=`<tr><td>${t}R</td><td class="t-right" style="color:var(--c3)">+${fmt(win)}</td><td class="t-right" style="color:var(--c4)">-${fmt(lose)}</td><td class="t-right" style="color:${net>=0? "var(--c3)":"var(--c4)"}">${fmt(net)}</td><td>${fmt(per)}</td><td>${fmt(hun)}</td></tr>`;
+  });
+  eh+="</tbody>";
+  $("etbl").innerHTML=eh;
+}
+
+// 匯率連動
+$("usd").addEventListener("input",()=>{
+  const rate=Number($("hkd").value)||273000/(Number($("usd").value)||35000);
+  $("hkd").value=Math.round((Number($("usd").value)||0)*rate);
+});
+$("hkd").addEventListener("input",()=>{
+  const rate=Number($("hkd").value)/(Number($("usd").value)||35000);
+  // 可反向更新 USD，這裡先保留用戶輸入
+});
+
+// 初始跑一次
+calc();
+</script>
+</body>
+</html>
