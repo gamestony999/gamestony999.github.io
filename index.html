@@ -571,7 +571,8 @@
                 // --- Firebase Core ---
                 async initFirebase() {
                     try {
-                        const firebaseConfig = JSON.parse(atob("QUl6YVN5QklwSnBRaENQV..................................")); // Replace with your actual Firebase config
+                        // This placeholder will be replaced by the GitHub Action
+                        const firebaseConfig = __FIREBASE_CONFIG__;
                         const app = initializeApp(firebaseConfig);
                         this.db = getFirestore(app);
                         this.auth = getAuth(app);
@@ -595,7 +596,7 @@
                         });
                     } catch(e) { 
                         console.error("Firebase initialization failed:", e); 
-                        this.authError = "Firebase 設定無效，請檢查您的設定。";
+                        this.authError = "Firebase 設定無效或尚未注入。";
                     }
                 },
                 
@@ -843,3 +844,4 @@
     </script>
 </body>
 </html>
+
