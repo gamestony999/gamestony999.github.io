@@ -5,9 +5,9 @@ name: Deploy Trading Workbench to GitHub Pages
 on:
   push:
     branches:
-      - main # 您可以根據您的主要分支名稱修改，例如 master
+      - main # 您的主要分支名稱
 
-# 工作流程執行的權限設定
+# ❗❗❗ **關鍵修正：新增部署所需的權限** ❗❗❗
 permissions:
   contents: read
   pages: write
@@ -28,7 +28,7 @@ jobs:
           # 從 GitHub Secrets 讀取經過 Base64 編碼的設定
           # 並將其解碼後，安全地寫入 HTML 檔案中
           echo "${{ secrets.FIREBASE_CONFIG }}" | base64 --decode > firebase_config.json
-          sed -i "s|'__FIREBASE_CONFIG_B64__'|\"$(cat firebase_config.json)\"|" trading_workbench_github.html
+          sed -i "s|atob('__FIREBASE_CONFIG_B64__')|'$(cat firebase_config.json)'|" trading_workbench_github.html
 
       # 步驟 3: 設定 GitHub Pages
       - name: Setup Pages
